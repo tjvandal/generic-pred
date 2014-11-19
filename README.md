@@ -1,2 +1,1 @@
-bugfree-boo
-===========
+Generic Pred
