@@ -1,6 +1,6 @@
 module Lyaponuv
 
-export lyaponuv_k, lyaponuv
+export lyaponuv_k, lyaponuv, lyaponuv_exp
 
 function lyaponuv_k(time_series, J, m, ref)
     N = length(time_series)
@@ -48,12 +48,18 @@ function lyaponuv_k(time_series, J, m, ref)
     return(y)
 end
 
-function lyaponuv(series)
+function lyaponuv_exp(series)
     nn = !isnan(series)
     A = ones(length(series), 2)
     A[:,1] = linspace(1, length(series), length(series))
     gradient = \(A, series)
     return(gradient[1])
+end
+
+function lyaponuv(time_series, J, m, ref)
+	ts = lyaponuv_k(time_series, J, m, ref)
+	exponent = lyaponuv_exp(ts[isfinite(ts)])  ## only input those which are finite
+	return(exponent)
 end
 
 end
