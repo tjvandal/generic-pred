@@ -4,7 +4,7 @@
 
 rm(list=ls())
 # setwd("C:/Users/PRobson/Desktop/Cool Stuff/GenericPred")
-setwd("/home/tj/repos/time-series-prediction/")
+setwd("/Users/thomas.vandal/repos/generic-pred/")
 getwd()
 
 require(tseriesChaos)
@@ -15,7 +15,7 @@ min_date<-"07/01/2001"
 max_date<-"07/01/2007"
 
 #Import TS and limit down to relevant dates
-sn <- read.csv("DJA.csv",header=TRUE)
+sn <- read.csv("data/DJA.csv",header=TRUE)
 sn$Date <- as.Date(sn$Date,format="%m/%d/%Y")
 sn.ho <- sn[sn$Date>as.Date(max_date,format="%m/%d/%Y"),]
 sn <- sn[sn$Date>=as.Date(min_date,format="%m/%d/%Y"),]
@@ -35,19 +35,24 @@ s <- sqrt(mean(s.dif)) ## EK: note to self RMS difference
 ## Function to sample values and output best prediction based on given criteria
 sample_next_value<-function(in.ds, start.yn, stdev,n.samp)
 {
+  
   Pos <- rnorm(n=n.samp, mean=start.yn, sd=stdev)
   jmin <- matrix(NA,nrow=n.samp,ncol=2)
-  jmin1 <- invisible(lyap_k(as.ts(sndj), m=1, d=1, ref=length(sndj), t=5, s=3, eps=10)[2])
+  jmin1 <- invisible(lyap_k(as.ts(sndj), m=3, d=1, ref=length(sndj), t=5, s=15, eps=1, k=2))
+  plot(jmin1)
+  jmin1 <- lyap(jmin1, 4.5, 5.5)[2]
   for (k in 1:n.samp)
   {
     #lyap_k(time_series, embedding dimension, time delay, number of points take into account, theiler window, iterations following neighbors)
-    vsn2 <- invisible(lyap_k(as.ts(append(in.ds,Pos[k])), m=1, d=1, ref=length(in.ds)+1, t=5, s=3, eps=10)[2])
+    vsn2 <- invisible(lyap_k(as.ts(append(in.ds,Pos[k])), m=3, d=1, ref=length(in.ds)+1, t=5, s=15, eps=1, k=2))
+   cat(vsn2, "\n")
+    vsn2 <- lyap(vsn2, 4.5, 5.5)[2]
     jmin[k,1]<-abs(jmin1-vsn2)
     jmin[k,2]<-Pos[k]
   }
 
   jmin <- jmin[order(jmin[,1]),] ## this works
-best.y <- jmin[1,2]  
+  best.y <- jmin[1,2]  
   return(best.y) 
 }
 
@@ -56,6 +61,7 @@ best.y <- jmin[1,2]
 runGenericPred <- function(lead_time=600, s=3)
 {
   yn <- sndj[length(sndj)]
+  cat(yn)
   yi <- sample_next_value(in.ds=sndj, start.yn=yn, stdev=s, n.samp=2)
   sndj.p <- append(sndj,yi)
   t <- 1
@@ -77,7 +83,7 @@ runGenericPredStochastic <- function(iter = 2, LEAD_TIME=5)
 {
   prediction_array <- NULL
   i <- 1
-  temp <- mclapply(i:iter, boot)
+  temp <- lapply(i:iter, boot)
   prediction_array <- do.call(cbind, temp)
   cat(dim(prediction_array))
   return(prediction_array)
@@ -116,11 +122,11 @@ plot_stochastic_experiment <- function(training = sndj, predictions=stochastic_e
 
 lead_time <- 600
 stochastic_experiment <- invisible(runGenericPredStochastic(iter = 50, LEAD_TIME=lead_time))
-plot_stochastic_experiment(training = sndj, predictions=stochastic_experiment, holdout = snho[1:lead_time])
+#plot_stochastic_experiment(training = sndj, predictions=stochastic_experiment, holdout = snho[1:lead_time])
 
 
-dst = lyap_k(as.ts(sndj), m=1, d=2, ref=length(sndj), t=5, s=200, eps=10)
-dst = dst[2:length(dst)]
-plot(dst)
-lyap(as.ts(dst), 0, end=7)
+#dst = lyap_k(as.ts(sndj), m=1, d=2, ref=length(sndj), t=5, s=200, eps=10)
+#dst = dst[2:length(dst)]
+#plot(dst)
+#lyap(as.ts(dst), 0, end=7)
 
