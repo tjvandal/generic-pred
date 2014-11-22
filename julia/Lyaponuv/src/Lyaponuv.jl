@@ -39,7 +39,8 @@ function lyaponuv_k(time_series, J, m, ref)
             jtrue = j+i
 
             if jhat <= M && jtrue <= M
-                agg = agg + log(vecnorm(X[:, jtrue] - X[:, jhat]))
+                agg = agg + log(NORMS[jtrue, jhat])
+               # agg = agg + log(vecnorm(X[:, jtrue] - X[:, jhat]))
                 count = count + 1
             end
         end
