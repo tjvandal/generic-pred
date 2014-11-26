@@ -116,7 +116,8 @@ function lyaponuv_next(time_series, J, m, ref, sample_size)
         M = size(norms)[1] 
         ts = copy(time_series)
         append!(ts, [s])
-        tasks[i] = @spawn get_next(ts, m, M, copy(norms), ref, J)
+        #tasks[i] = @spawn get_next(ts, m, M, copy(norms), ref, J)
+        @spawn get_next(ts, m, M, copy(norms), ref, J)
         #exponents[i] = fetch(r)
         @printf("process: %d\n", i) 
     end
