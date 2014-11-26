@@ -21,13 +21,10 @@ J = 1  ## reconstruction delay
 m = 3  ## embedding dimens
 
 next_x_values = 1
-sample_size = 10
+sample_size = 5
 series = deepcopy(logistic_time_series)
 for j=1:next_x_values
     val = lyaponuv_next(series, J, m, 10, sample_size)
     append!(series, [val])
-	#Profile.clear()
- 	#@profile lyaponuv_next(series, J, m, 10, sample_size)
-  	#Profile.print()
 end
 

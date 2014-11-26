@@ -106,17 +106,16 @@ function lyaponuv_next(time_series, J, m, ref, sample_size)
     ts_diff = time_series[2:end] - time_series[1:end-1]
     sigma = std(ts_diff)
     samples = randn(sample_size) * sigma + time_series[end]
-    norms, lyap_k = lyaponuv_k(time_series, J, m, ref)
+    @time norms, lyap_k = lyaponuv_k(time_series, J, m, ref)
     true_exponent = lyaponuv_exp(lyap_k)
     exponents = Array(Float64, sample_size)
-    
+    M = size(norms)[1]
     tasks = Array(RemoteRef, sample_size)
+
     for i=1:sample_size
         s = samples[i]
-        M = size(norms)[1] 
-        ts = copy(time_series)
-        append!(ts, [s])
-        tasks[i] = @spawn get_next(ts, m, M, copy(norms), ref, J)
+        @time tasks[i] = @spawn get_next(vcat(time_series, s), m, M, norms, ref, J)
+        #@time exponents[i] = get_next(vcat(time_series, s), m, M, norms, ref, J)        
         @printf("process: %d\n", i) 
     end
     
