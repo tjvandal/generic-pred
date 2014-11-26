@@ -9,7 +9,7 @@ function logistic(x, mu)
 end
 
 x = rand(1)[1]
-n = 4000
+n = 10000
 mu = 4
 logistic_time_series = Array(Float64, n)
 for i=1:n
@@ -21,7 +21,7 @@ J = 1  ## reconstruction delay
 m = 3  ## embedding dimens
 
 next_x_values = 1
-sample_size = 50
+sample_size = 10
 series = deepcopy(logistic_time_series)
 for j=1:next_x_values
     val = lyaponuv_next(series, J, m, 10, sample_size)

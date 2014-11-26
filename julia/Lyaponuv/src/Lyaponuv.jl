@@ -116,16 +116,14 @@ function lyaponuv_next(time_series, J, m, ref, sample_size)
         M = size(norms)[1] 
         ts = copy(time_series)
         append!(ts, [s])
-        #tasks[i] = @spawn get_next(ts, m, M, copy(norms), ref, J)
-        @spawn get_next(ts, m, M, copy(norms), ref, J)
-        #exponents[i] = fetch(r)
+        tasks[i] = @spawn get_next(ts, m, M, copy(norms), ref, J)
         @printf("process: %d\n", i) 
     end
     
     for i=1:sample_size
         exponents[i]=fetch(tasks[i])
     end
-    println("got all exponents")
+
     diff = abs(exponents .-  true_exponent)    
     val, idx = findmin(diff)
     println("Next Value:", samples[idx])
