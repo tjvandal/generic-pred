@@ -1,36 +1,40 @@
 module Lyaponuv
 
-export lyaponuv_k, lyaponuv, lyaponuv_exp
+export lyaponuv_k, lyaponuv, lyaponuv_exp, lyaponuv_next, match_pairs, attractor,
+    follow_points, compute_norms, column_norms, get_next
 
 function lyaponuv_k(time_series, J, m, ref)
+    X = attractor(time_series, m, J)
+    norms = compute_norms(X)
+    pairs = match_pairs(norms)
+    y = follow_points(pairs, norms, ref)    
+    return(norms,y)
+end
+
+function match_pairs(norms)
+    M = size(norms)[1]
+    pairs = Array(Int, M)
+    for row in 1:M
+        mn, idx = findmin(norms[row, :])
+        pairs[row] = idx
+    end
+    return(pairs)
+end
+
+function attractor(time_series, m, J)
     N = length(time_series)
-    M = N - (m - 1) * J
+    M = N - (m - 1) * J  
     X = Array(Float64, m, M)
     i = 1
     for i=1:M
         X[:,i] = time_series[i:J:(i+(m-1)*J)]
     end
+    return(X)
+end
 
-    NORMS = Array(Float64, M, M)
-    for i=1:M
-        for j=i:M
-            if i == j
-                NORMS[i, j]=9999.   #arbitrarily large number
-            else
-                NORMS[i,j] = vecnorm(X[:, i] - X[:, j])  #eucilidean norm
-                NORMS[j,i] = NORMS[i, j]      # matrix is symmetric
-            end
-        end
-    end
-    
-    # match pairs with lowest eucilidean values
-    pairs = Array(Int, M)
-    for row in 1:M
-        mn, idx = findmin(NORMS[row, :])
-        pairs[row] = idx
-    end
-
+function follow_points(pairs, norms, ref)
     y = Array(Float64, ref)
+    M = size(norms)[1]
     for i=0:ref-1
         agg = 0 
         count = 0
@@ -39,7 +43,7 @@ function lyaponuv_k(time_series, J, m, ref)
             jtrue = j+i
 
             if jhat <= M && jtrue <= M
-                agg = agg + log(NORMS[jtrue, jhat])
+                agg = agg + log(norms[jtrue, jhat])
                # agg = agg + log(vecnorm(X[:, jtrue] - X[:, jhat]))
                 count = count + 1
             end
@@ -49,6 +53,26 @@ function lyaponuv_k(time_series, J, m, ref)
     return(y)
 end
 
+
+function compute_norms(X)
+    M = size(X)[2]
+    norms = Array(Float64, M, M)
+    for i=1:M
+        norms[i,:] = column_norms(X, i)      
+    end    
+    return(norms)
+end
+
+
+function column_norms(X, i)
+    M = size(X)[2]
+    X_diff = X .- X[:, i]
+    norm_vector = [vecnorm(X_diff[:, k]) for k=1:M]
+    norm_vector[i] = 10^10
+    return(norm_vector)
+end
+
+
 function lyaponuv_exp(series)
     nn = !isnan(series)
     A = ones(length(series), 2)
@@ -57,10 +81,54 @@ function lyaponuv_exp(series)
     return(gradient[1])
 end
 
+
 function lyaponuv(time_series, J, m, ref)
-	ts = lyaponuv_k(time_series, J, m, ref)
-	exponent = lyaponuv_exp(ts[isfinite(ts)])  ## only input those which are finite
-	return(exponent)
+    ts = lyaponuv_k(time_series, J, m, ref)[2]
+    exponent = lyaponuv_exp(ts[isfinite(ts)])  ## only input those which are finite
+    return(exponent)
+end
+
+function get_next(ts, m, M, norms, ref, J)
+    
+    attractor_array = attractor(ts, m, J)
+    temp_norms = Array(Float64, M+1, M+1)
+    temp_norms[1:M, 1:M] = norms
+    col = column_norms(attractor_array, M+1)
+    temp_norms[M+1, :] = col
+    temp_norms[:, M+1] = col
+
+    pairs=match_pairs(temp_norms)
+    lyap_k_temp = follow_points(pairs, temp_norms, ref)
+    return(lyaponuv_exp(lyap_k_temp))
+end
+
+function lyaponuv_next(time_series, J, m, ref, sample_size)
+    ts_diff = time_series[2:end] - time_series[1:end-1]
+    sigma = std(ts_diff)
+    samples = randn(sample_size) * sigma + time_series[end]
+    norms, lyap_k = lyaponuv_k(time_series, J, m, ref)
+    true_exponent = lyaponuv_exp(lyap_k)
+    exponents = Array(Float64, sample_size)
+    
+    tasks = Array(RemoteRef, sample_size)
+    for i=1:sample_size
+        s = samples[i]
+        M = size(norms)[1] 
+        ts = copy(time_series)
+        append!(ts, [s])
+        tasks[i] = @spawn get_next(ts, m, M, copy(norms), ref, J)
+        #exponents[i] = fetch(r)
+        @printf("process: %d\n", i) 
+    end
+    
+    for i=1:sample_size
+        exponents[i]=fetch(tasks[i])
+    end
+    println("got all exponents")
+    diff = abs(exponents .-  true_exponent)    
+    val, idx = findmin(diff)
+    println("Next Value:", samples[idx])
+    return(samples[idx])
 end
 
 end
