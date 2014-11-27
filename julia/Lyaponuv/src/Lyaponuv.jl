@@ -114,9 +114,9 @@ function lyaponuv_next(time_series, J, m, ref, sample_size)
 
     for i=1:sample_size
         s = samples[i]
-        @time tasks[i] = @spawn get_next(vcat(time_series, s), m, M, norms, ref, J)
+        tasks[i] = @spawn get_next(vcat(time_series, s), m, M, norms, ref, J)
         #@time exponents[i] = get_next(vcat(time_series, s), m, M, norms, ref, J)        
-        @printf("process: %d\n", i) 
+        #@printf("process: %d\n", i) 
     end
     
     for i=1:sample_size
