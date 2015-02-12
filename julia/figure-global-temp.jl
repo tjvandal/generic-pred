@@ -50,3 +50,4 @@ for increment in [10, 100, 1000]
 	names!(df, cols)
 	df[:Date] = data[:Year]
 	writetable("global-temp-predict-$(increment).csv", df)
+
